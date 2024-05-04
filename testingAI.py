@@ -1,56 +1,44 @@
-import pandas as pd
+import csv
 import requests
-from PIL import Image
-from io import BytesIO
-import concurrent.futures
+import os
+import re
 
-def download_image(url):
-    try:
-        headers = {
-            'User-Agent'      : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36', 
-            'Accept'          : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 
-            'Accept-Language' : 'en-US,en;q=0.5',
-            'DNT'             : '1', # Do Not Track Request Header 
-            'Connection'      : 'close'}
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return Image.open(BytesIO(response.content))
-        else:
-            print(f"Error downloading image from {url}: {response.status_code}")
-            return None
-    except requests.RequestException as e:
-        print(f"Request error downloading image from {url}: {e}")
-        return None
-    except Exception as e:
-        print(f"Error downloading image from {url}: {e}")
-        return None
+# Directory where images will be saved
+save_dir = 'downloaded_images'
 
-if __name__ == "__main__":
-    # Read image URLs from CSV file using pandas
-    df = pd.read_csv('C:\\Proyectos_Github\\hackupc\\indie2.csv')
+# Ensure the save directory exists
+if not os.path.exists(save_dir):
+    os.makedirs(save_dir)
 
-    image_urls = []
-    for index, col in df.iterrows():
-        index += 1
-        url1 = col.iloc[0]  
-        url2 = col.iloc[1]  
-        url3 = col.iloc[2]  
-        combined_url = f"{url1}{url2}{url3}"  
-        image_urls.append(combined_url)
+# Function to sanitize the filename
+def sanitize_filename(filename):
+    # Remove characters that are not allowed in filenames on Windows
+    return re.sub(r'[\\/:"*?<>|]', '_', filename)
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        print("Downloading images from:")
-        for url in image_urls:
-            print(url)
-        future_to_url = {executor.submit(download_image, url): url for url in image_urls}
-        downloaded_images = []
-        for future in concurrent.futures.as_completed(future_to_url):
-            url = future_to_url[future]
+# Open the CSV file containing image URLs
+with open('indie2.csv', 'r') as csvfile:
+    reader = csv.reader(csvfile)
+    next(reader)  # Skip the header row if present
+    for row in reader:
+        # Assuming the URLs are in the first, second, and third columns
+        urls = [row[0], row[1], row[2]]
+        
+        for url in urls:
             try:
-                image = future.result()
-                if image:
-                    downloaded_images.append(image)
+                # Sanitize the filename
+                sanitized_url = sanitize_filename(url)
+                filename = os.path.join(save_dir, os.path.basename(sanitized_url))
+                
+                # Download the image
+                response = requests.get(url, stream=True)
+                if response.status_code == 200:
+                    with open(filename, 'wb') as file:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            file.write(chunk)
+                    print(f"Downloaded {url} as {filename}")
+                else:
+                    print(f"Failed to download {url}")
             except Exception as e:
-                print(f"Exception occurred while downloading image from {url}: {e}")
+                print(f"An error occurred while processing {url}: {e}")
 
-    print(downloaded_images)
+print("All images downloaded.")
