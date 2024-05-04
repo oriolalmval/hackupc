@@ -14,7 +14,7 @@ export const Navbar = () => {
                     MAN
                 </Link>
                 <Link href="/Suggestions">
-                    SUGGESTIONs
+                    SUGGESTIONS
                 </Link>
             </div>
         </nav>
