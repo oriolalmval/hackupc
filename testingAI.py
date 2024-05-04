@@ -19,9 +19,9 @@ def sanitize_filename(filename):
 with open('indie2.csv', 'r') as csvfile:
     reader = csv.reader(csvfile)
     next(reader)  # Skip the header row if present
-    for row in reader:
+    for col in reader:
         # Assuming the URLs are in the first, second, and third columns
-        urls = [row[0], row[1], row[2]]
+        urls = [col[0], col[1], col[2]]
         
         for url in urls:
             try:
